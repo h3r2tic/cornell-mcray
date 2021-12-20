@@ -1,0 +1,5 @@
+/baked
+/.vscode
+/target
+output.log
+dxcompiler.dll
