@@ -48,3 +48,10 @@ Then run:
 ```
 cargo run --release
 ```
+
+## Controls
+
+* WSAD - driving
+* Shift - boost
+* B - spawn a box 🤷‍♂️
+* Q - party mode 🎊
