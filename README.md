@@ -52,6 +52,17 @@ cargo run --release
 ## Controls
 
 * WSAD - driving
-* Shift - boost
+* Shift - nitro
 * B - spawn a box 🤷‍♂️
 * Q - party mode 🎊
+
+### License
+
+This contribution is dual licensed under EITHER OF
+
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+at your option.
+
+For clarity, "your" refers to Embark or any other licensee/user of the contribution.
