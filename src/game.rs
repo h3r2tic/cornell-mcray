@@ -82,7 +82,7 @@ impl Game {
             )
             .bind(
                 VirtualKeyCode::LShift,
-                KeyMap::new("boost", 1.0).activation_time(0.3),
+                KeyMap::new("nitro", 1.0).activation_time(0.3),
             );
 
         let camera = CameraRig::builder()
@@ -174,7 +174,7 @@ impl Game {
         let input = self.keymap.map(&self.keyboard, ctx.dt_filtered);
         self.car.update_motors(
             self.physics,
-            input["thrust"] * 2.0f32.powf(input["boost"]),
+            input["thrust"] * 2.0f32.powf(input["nitro"]),
             -input["steering"],
         );
     }
