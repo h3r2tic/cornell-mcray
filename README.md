@@ -8,7 +8,7 @@
   
 # 🕹️ Cornell McRay t'Racing
 
-A quick'n'dirty game sample using [`kajiya`](https://github.com/EmbarkStudios/kajiya) and [`physx-rs`](https://github.com/EmbarkStudios/physx-rs).
+A quick'n'dirty game sample using [`kajiya`](https://github.com/EmbarkStudios/kajiya), [`physx-rs`](https://github.com/EmbarkStudios/physx-rs), and [`dolly`](https://github.com/h3r2tic/dolly).
 
 ![mcray](https://user-images.githubusercontent.com/16522064/146706174-dabbe36a-d846-4550-a6d6-35aa9047c4f6.gif)
 
