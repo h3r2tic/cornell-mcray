@@ -118,8 +118,8 @@ impl Game {
         })
     }
 
-    fn process_events(&mut self, ctx: &mut FrameContext) {
-        self.global_time += ctx.dt_filtered as f64;
+    fn process_events(&mut self, dt: f32, ctx: &mut FrameContext) {
+        self.global_time += dt as f64;
         self.keyboard.update(ctx.events);
 
         if self.keyboard.was_just_pressed(VirtualKeyCode::Space) {
@@ -179,7 +179,7 @@ impl Game {
         );
     }
 
-    fn update_game_objects(&mut self, ctx: &mut FrameContext) {
+    fn update_game_objects(&mut self, dt: f32, ctx: &mut FrameContext) {
         self.car
             .sync_transforms_from_physics(self.physics, ctx.world_renderer);
 
@@ -204,7 +204,7 @@ impl Game {
 
         // Age the dynamic cubes
         for (_, _, t) in &mut self.dynamic_cubes {
-            *t += ctx.dt_filtered;
+            *t += dt;
         }
 
         // Remove old cubes
@@ -222,31 +222,25 @@ impl Game {
         for (inst, rb_handle, _) in &self.dynamic_cubes {
             let xform = self
                 .physics
-                .get_dynamic_actor_transform(*rb_handle)
+                .get_dynamic_actor_extrapolated_transform(*rb_handle)
                 .unwrap();
             ctx.world_renderer
                 .set_instance_transform(*inst, xform.translation(), xform.rotation());
         }
     }
 
-    fn step_physics(&mut self, dt: f32) {
-        self.physics
-            .scene
-            .step(
-                dt,
-                None::<&mut physx_sys::PxBaseTask>,
-                Some(unsafe { &mut ScratchBuffer::new(4) }),
-                true,
-            )
-            .expect("error occured during simulation");
+    fn update_physics(&mut self, dt: f32) {
+        self.physics.simulate(dt);
     }
 
     pub fn frame(&mut self, mut ctx: FrameContext) -> WorldFrameDesc {
-        self.process_events(&mut ctx);
+        // Cap the max sim time so we don't skip too much time if the game's running slow
+        let dt = ctx.dt_filtered.min(1.0 / 5.0);
 
-        // TODO: run this at fixed rate
-        self.step_physics(1.0 / 60.0);
-        self.update_game_objects(&mut ctx);
+        self.process_events(dt, &mut ctx);
+
+        self.update_physics(dt);
+        self.update_game_objects(dt, &mut ctx);
 
         self.camera.driver_mut::<Position>().position = self.car.position;
         self.camera.driver_mut::<Rotation>().rotation = self.car.rotation;
@@ -259,7 +253,7 @@ impl Game {
 
         let camera_matrices = self
             .camera
-            .update(ctx.dt_filtered)
+            .update(dt)
             .into_position_rotation()
             .through(&lens);
 

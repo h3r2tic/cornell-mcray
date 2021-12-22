@@ -7,7 +7,10 @@ use physx::{
     prelude::*,
     traits::Class,
 };
-use physx_sys::{PxMeshGeometryFlags, PxMeshScale};
+use physx_sys::{
+    PxMeshGeometryFlags, PxMeshScale, PxRigidActor_getGlobalPose, PxRigidBody_getAngularVelocity,
+    PxRigidBody_getLinearVelocity,
+};
 use slotmap::{new_key_type, SlotMap};
 
 /// Many of the main types in PhysX have a userData *mut c_void field.
@@ -90,6 +93,7 @@ pub struct PhysicsState {
     pub foundation: PhysicsFoundation<physx::foundation::DefaultAllocator, PxShape>,
     pub scene: Owner<PxScene>,
     resources: Resources,
+    dt_accum: f32,
 }
 
 impl PhysicsState {
@@ -111,6 +115,30 @@ impl PhysicsState {
             foundation,
             scene,
             resources: Default::default(),
+            dt_accum: 0.0,
+        }
+    }
+
+    /// Step the simulation if necessary.
+    ///
+    /// The physics world is updated at a fixed frequency (needed for solver accuracy),
+    /// so the simulation might run zero or more times.
+    pub fn simulate(&mut self, dt: f32) {
+        const STEP_SIZE: f32 = 1.0 / 60.0;
+
+        self.dt_accum += dt;
+
+        while self.dt_accum >= STEP_SIZE {
+            self.dt_accum -= STEP_SIZE;
+
+            self.scene
+                .step(
+                    STEP_SIZE,
+                    None::<&mut physx_sys::PxBaseTask>,
+                    Some(unsafe { &mut ScratchBuffer::new(4) }),
+                    true,
+                )
+                .expect("error occured during simulation");
         }
     }
 
@@ -133,11 +161,41 @@ impl PhysicsState {
             .and_then(|actor| unsafe { (*actor as *mut PxRigidDynamic).as_mut() })
     }
 
-    pub fn get_dynamic_actor_transform(&self, handle: RigidDynamicHandle) -> Option<IsoTransform> {
+    /// Calculate the actor's position extrapolated from the last physics sim results.
+    pub fn get_dynamic_actor_extrapolated_transform(
+        &self,
+        handle: RigidDynamicHandle,
+    ) -> Option<IsoTransform> {
         self.get_dynamic_actor(handle).map(|rb| {
-            let position: Vec3 = rb.get_global_position().new_from_px();
-            let rotation: Quat = rb.get_global_rotation().new_from_px();
-            IsoTransform::from_rotation_translation(rotation, position)
+            let pose = unsafe { PxRigidActor_getGlobalPose(rb.as_ptr()) };
+            let position: Vec3 = pose.p.new_from_px();
+            let rotation: Quat = pose.q.new_from_px();
+
+            // Extrapolate by `self.dt_accum` using the rigid's velocity.
+            let (delta_translation, delta_rotation) = {
+                let t = self.dt_accum;
+
+                let linear_velocity =
+                    unsafe { PxRigidBody_getLinearVelocity(rb.as_ptr()) }.new_from_px();
+                let angular_velocity =
+                    unsafe { PxRigidBody_getAngularVelocity(rb.as_ptr()) }.new_from_px();
+
+                let angle = angular_velocity.length();
+                let axis = angular_velocity / angle;
+
+                let delta_rotation = if axis.is_finite() {
+                    Quat::from_axis_angle(axis, angle * t)
+                } else {
+                    Quat::IDENTITY
+                };
+
+                (linear_velocity * t, delta_rotation)
+            };
+
+            IsoTransform::from_rotation_translation(
+                delta_rotation * rotation,
+                position + delta_translation,
+            )
         })
     }
 

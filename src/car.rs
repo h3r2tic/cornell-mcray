@@ -92,7 +92,9 @@ impl Car {
         world_renderer: &mut WorldRenderer,
     ) {
         for (rb_handle, inst) in &self.gfx_meshes {
-            let xform = physics.get_dynamic_actor_transform(*rb_handle).unwrap();
+            let xform = physics
+                .get_dynamic_actor_extrapolated_transform(*rb_handle)
+                .unwrap();
 
             world_renderer.set_instance_transform(*inst, xform.translation(), xform.rotation());
 
