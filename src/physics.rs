@@ -1,10 +1,14 @@
-use std::collections::HashMap;
+use std::ffi::c_void;
 
 use kajiya_simple::*;
-use physx::{prelude::*, traits::Class};
-
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
-pub struct RigidDynamicHandle(usize);
+use macaw::IsoTransform;
+use physx::{
+    cooking::{PxCooking, PxCookingParams, PxTriangleMeshDesc},
+    prelude::*,
+    traits::Class,
+};
+use physx_sys::{PxMeshGeometryFlags, PxMeshScale};
+use slotmap::{new_key_type, SlotMap};
 
 /// Many of the main types in PhysX have a userData *mut c_void field.
 /// Representing this safely in Rust requires generics everywhere,
@@ -70,11 +74,22 @@ impl AdvanceCallback<PxArticulationLink, PxRigidDynamic> for OnAdvance {
     }
 }
 
+new_key_type! {
+    pub struct RigidDynamicHandle;
+    pub struct TriangleMeshHandle;
+    pub struct TriangleMeshGeometryHandle;
+}
+
+#[derive(Default)]
+struct Resources {
+    dynamic_actor: SlotMap<RigidDynamicHandle, *mut physx_sys::PxRigidDynamic>,
+    triangle_mesh: SlotMap<TriangleMeshHandle, Owner<physx::triangle_mesh::TriangleMesh>>,
+}
+
 pub struct PhysicsState {
     pub foundation: PhysicsFoundation<physx::foundation::DefaultAllocator, PxShape>,
     pub scene: Owner<PxScene>,
-    dynamic_actors: HashMap<RigidDynamicHandle, *mut physx_sys::PxRigidDynamic>,
-    next_handle: usize,
+    resources: Resources,
 }
 
 impl PhysicsState {
@@ -95,32 +110,105 @@ impl PhysicsState {
         Self {
             foundation,
             scene,
-            dynamic_actors: Default::default(),
-            next_handle: 1,
+            resources: Default::default(),
         }
     }
 
     pub fn add_dynamic_actor(&mut self, mut actor: Owner<PxRigidDynamic>) -> RigidDynamicHandle {
-        let handle = self.next_handle;
-        self.next_handle += 1;
-
-        let handle = RigidDynamicHandle(handle);
-        self.dynamic_actors.insert(handle, actor.as_mut_ptr());
-
+        let handle = self.resources.dynamic_actor.insert(actor.as_mut_ptr());
         self.scene.add_dynamic_actor(actor);
         handle
     }
 
     pub fn remove_dynamic_actor(&mut self, h: RigidDynamicHandle) {
-        let actor = self.dynamic_actors.remove(&h).expect("double free");
+        let actor = self.resources.dynamic_actor.remove(h).expect("double free");
         self.scene
             .remove_actor(unsafe { actor.as_mut().unwrap() }, true);
     }
 
-    pub fn get_dynamic_actor(&self, handle: RigidDynamicHandle) -> Option<&mut PxRigidDynamic> {
-        self.dynamic_actors
-            .get(&handle)
+    fn get_dynamic_actor(&self, handle: RigidDynamicHandle) -> Option<&mut PxRigidDynamic> {
+        self.resources
+            .dynamic_actor
+            .get(handle)
             .and_then(|actor| unsafe { (*actor as *mut PxRigidDynamic).as_mut() })
+    }
+
+    pub fn get_dynamic_actor_transform(&self, handle: RigidDynamicHandle) -> Option<IsoTransform> {
+        self.get_dynamic_actor(handle).map(|rb| {
+            let position: Vec3 = rb.get_global_position().new_from_px();
+            let rotation: Quat = rb.get_global_rotation().new_from_px();
+            IsoTransform::from_rotation_translation(rotation, position)
+        })
+    }
+
+    pub fn add_static_mesh_actor(
+        &mut self,
+        mesh: TriangleMeshHandle,
+        transform: Affine3A,
+        material: &mut PxMaterial,
+    ) {
+        let (scale, rotation, translation) = transform.to_scale_rotation_translation();
+
+        let mesh_geo = PxTriangleMeshGeometry::new(
+            &mut *self.resources.triangle_mesh.get_mut(mesh).unwrap(),
+            &PxMeshScale {
+                scale: scale.into_px().into(),
+                rotation: physx_sys::PxQuat {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 1.0,
+                },
+            },
+            PxMeshGeometryFlags { mBits: 0 },
+        );
+
+        let rigid_static = self
+            .foundation
+            .create_rigid_static(
+                PxTransform::from_translation_rotation(&translation.into_px(), &rotation.into_px()),
+                &mesh_geo,
+                material,
+                PxTransform::default(),
+                (),
+            )
+            .unwrap();
+
+        self.scene.add_static_actor(rigid_static);
+    }
+
+    pub fn cook_mesh(
+        &mut self,
+        asset: &kajiya::asset::mesh::PackedTriMesh::Flat,
+    ) -> TriangleMeshHandle {
+        let cooking_params =
+            PxCookingParams::new(self.foundation.physics()).expect("PxCookingParams::new");
+        let cooking = PxCooking::new(self.foundation.foundation_mut(), &cooking_params)
+            .expect("PxCooking::new");
+
+        let mut mesh_desc = PxTriangleMeshDesc::new();
+        mesh_desc.obj.triangles.data = asset.indices.as_ptr() as *const c_void;
+        mesh_desc.obj.triangles.count = (asset.indices.len() / 3) as _;
+        mesh_desc.obj.triangles.stride = (std::mem::size_of::<u32>() * 3) as _;
+        mesh_desc.obj.points.data = asset.verts.as_ptr() as *const c_void;
+        mesh_desc.obj.points.count = asset.verts.len() as _;
+        mesh_desc.obj.points.stride = std::mem::size_of::<kajiya::asset::mesh::PackedVertex>() as _;
+
+        let mesh = cooking.create_triangle_mesh(self.foundation.physics_mut(), &mesh_desc);
+        let mesh = match mesh {
+            physx::cooking::TriangleMeshCookingResult::Success(mesh) => mesh,
+            physx::cooking::TriangleMeshCookingResult::LargeTriangle => {
+                panic!("PxCooking_createTriangleMesh failed: LargeTriangle")
+            }
+            physx::cooking::TriangleMeshCookingResult::Failure => {
+                panic!("PxCooking_createTriangleMesh failed: Failure")
+            }
+            physx::cooking::TriangleMeshCookingResult::InvalidDescriptor => {
+                panic!("PxCooking_createTriangleMesh failed: InvalidDescriptor")
+            }
+        };
+
+        self.resources.triangle_mesh.insert(mesh)
     }
 }
 
