@@ -56,7 +56,7 @@ cargo run --release
 * B - spawn a box 🤷‍♂️
 * Q - party mode 🎊
 
-### License
+## License
 
 This contribution is dual licensed under EITHER OF
 
