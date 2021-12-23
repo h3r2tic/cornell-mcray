@@ -16,17 +16,14 @@ A quick'n'dirty game sample using [`kajiya`](https://github.com/EmbarkStudios/ka
 
 ## Building
 
-Sync to the same parent directory that `kajiya` is in, so that the folder structure becomes:
+Clone this repo to the same parent directory that `kajiya` is in:
 
 ```
-kajiya/
-kajiya/assets
-(...)
-cornell-mcray/
-(...)
+kajiya/             <- root of the `kajiya` repository
+cornell-mcray/      <- this repository
 ```
 
-Build the `bake` bin in the `kajiya` folder:
+Make sure the `bake` bin in the `kajiya` folder is built:
 
 ```
 cd kajiya
@@ -36,12 +33,15 @@ cargo build --release -p bake
 Bake the meshes for `cornell-mcray`:
 
 ```
+cd cornell-mcray
 bake.cmd
 ```
 
 ## Running
 
-Make sure `dxcompiler.dll` is in the executable environment. You can grab it from `kajiya` and copy into `cornell-mcray`, or stash it somewhere in `PATH`
+Make sure `dxcompiler.dll` / `libdxcompiler.so` is in the executable environment.
+
+_(You can grab it from `kajiya` and copy into `cornell-mcray`, or stash it somewhere in the system `PATH`)_
 
 Then run:
 
