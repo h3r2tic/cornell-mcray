@@ -14,6 +14,10 @@ A quick'n'dirty game sample using [`kajiya`](https://github.com/EmbarkStudios/ka
 
 </div>
 
+## System requirements
+
+See [the `kajiya` readme](https://github.com/EmbarkStudios/kajiya/#platforms).
+
 ## Building
 
 Clone this repo to the same parent directory that `kajiya` is in:
