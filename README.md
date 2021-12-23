@@ -39,7 +39,7 @@ bake.cmd
 
 ## Running
 
-Make sure `dxcompiler.dll` / `libdxcompiler.so` is in the executable environment.
+Make sure `dxcompiler.dll` is in the executable environment.
 
 _(You can grab it from `kajiya` and copy into `cornell-mcray`, or stash it somewhere in the system `PATH`)_
 
