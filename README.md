@@ -64,5 +64,3 @@ This contribution is dual licensed under EITHER OF
 * MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
 at your option.
-
-For clarity, "your" refers to Embark or any other licensee/user of the contribution.
