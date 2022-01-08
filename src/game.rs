@@ -42,7 +42,10 @@ impl Game {
         >("/baked/track.mesh")?;
 
         let env_mesh_gfx = world_renderer.add_mesh(track_mesh_asset, AddMeshOptions::default());
-        world_renderer.add_instance(env_mesh_gfx, Vec3::ZERO, Quat::IDENTITY);
+        world_renderer.add_instance(
+            env_mesh_gfx,
+            Affine3A::from_rotation_translation(Quat::IDENTITY, Vec3::ZERO),
+        );
 
         // Create track physics meshes
         let track_mesh = physics.cook_mesh(track_mesh_asset);
@@ -51,12 +54,18 @@ impl Game {
         // Create the dynamic occluder renderables (for party mode!)
         let occluder_mesh =
             world_renderer.add_baked_mesh("/baked/occluder.mesh", AddMeshOptions::default())?;
-        let occluder_inst = world_renderer.add_instance(occluder_mesh, Vec3::ZERO, Quat::IDENTITY);
+        let occluder_inst = world_renderer.add_instance(
+            occluder_mesh,
+            Affine3A::from_rotation_translation(Quat::IDENTITY, Vec3::ZERO),
+        );
 
         // Create the spinning cube light renderables
         let lights_mesh =
             world_renderer.add_baked_mesh("/baked/lights.mesh", AddMeshOptions::default())?;
-        let lights_inst = world_renderer.add_instance(lights_mesh, Vec3::ZERO, Quat::IDENTITY);
+        let lights_inst = world_renderer.add_instance(
+            lights_mesh,
+            Affine3A::from_rotation_translation(Quat::IDENTITY, Vec3::ZERO),
+        );
 
         // Create the car
         let car_meshes = CarMeshes::load(world_renderer)?;
@@ -165,9 +174,10 @@ impl Game {
                 .unwrap();
             let actor = self.physics.add_dynamic_actor(actor);
 
-            let inst = ctx
-                .world_renderer
-                .add_instance(self.cube_mesh, spawn_pos, spawn_rot);
+            let inst = ctx.world_renderer.add_instance(
+                self.cube_mesh,
+                Affine3A::from_rotation_translation(spawn_rot, spawn_pos),
+            );
             self.dynamic_cubes.push((inst, actor, 0.0));
         }
 
@@ -188,15 +198,19 @@ impl Game {
         self.occluder_t = lerp(self.occluder_t, occluder_target, 0.01);
         ctx.world_renderer.set_instance_transform(
             self.occluder_inst,
-            Vec3::new(0.0, (1.0 - self.occluder_t).powi(2) * -65.0, 0.0),
-            Quat::IDENTITY,
+            Affine3A::from_rotation_translation(
+                Quat::IDENTITY,
+                Vec3::new(0.0, (1.0 - self.occluder_t).powi(2) * -65.0, 0.0),
+            ),
         );
 
         // Rotate the cube lights
         ctx.world_renderer.set_instance_transform(
             self.lights_inst,
-            Vec3::new(0.0, (1.0 - self.occluder_t) * 8.0, 0.0),
-            Quat::from_rotation_y((self.global_time * 0.2 % std::f64::consts::TAU) as f32),
+            Affine3A::from_rotation_translation(
+                Quat::from_rotation_y((self.global_time * 0.2 % std::f64::consts::TAU) as f32),
+                Vec3::new(0.0, (1.0 - self.occluder_t) * 8.0, 0.0),
+            ),
         );
         ctx.world_renderer
             .get_instance_dynamic_parameters_mut(self.lights_inst)
@@ -224,8 +238,10 @@ impl Game {
                 .physics
                 .get_dynamic_actor_extrapolated_transform(*rb_handle)
                 .unwrap();
-            ctx.world_renderer
-                .set_instance_transform(*inst, xform.translation(), xform.rotation());
+            ctx.world_renderer.set_instance_transform(
+                *inst,
+                Affine3A::from_rotation_translation(xform.rotation(), xform.translation()),
+            );
         }
     }
 

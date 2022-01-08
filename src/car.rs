@@ -96,7 +96,10 @@ impl Car {
                 .get_dynamic_actor_extrapolated_transform(*rb_handle)
                 .unwrap();
 
-            world_renderer.set_instance_transform(*inst, xform.translation(), xform.rotation());
+            world_renderer.set_instance_transform(
+                *inst,
+                Affine3A::from_rotation_translation(xform.rotation(), xform.translation()),
+            );
 
             if self.main_rb == *rb_handle {
                 self.position = xform.translation();
@@ -115,7 +118,10 @@ impl Car {
 
         let body_position_in_car_space = Vec3::new(0.0, 0.4739, 0.0);
         let body_position = body_position_in_car_space + car_position;
-        let body_gfx = world_renderer.add_instance(car_meshes.body, Vec3::ZERO, Quat::IDENTITY);
+        let body_gfx = world_renderer.add_instance(
+            car_meshes.body,
+            Affine3A::from_rotation_translation(Quat::IDENTITY, Vec3::ZERO),
+        );
 
         let mut material = physics
             .foundation
@@ -164,7 +170,10 @@ impl Car {
             let is_front = wheel_idx >= 2;
 
             let position = car_position + position_in_car_space;
-            let gfx = world_renderer.add_instance(mesh, position, Quat::IDENTITY);
+            let gfx = world_renderer.add_instance(
+                mesh,
+                Affine3A::from_rotation_translation(Quat::IDENTITY, position),
+            );
 
             let axle_geo = PxSphereGeometry::new(0.28);
             let mut axle_actor = physics
