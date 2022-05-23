@@ -45,8 +45,7 @@ fn main() -> anyhow::Result<()> {
                 .with_resizable(false),
         )?;
 
-    // Fit the CSGI volume to the game world
-    kajiya.world_renderer.world_gi_scale = 7.0;
+    kajiya.world_renderer.ev_shift = 0.5;
 
     let mut game = Game::new(&mut kajiya.world_renderer)?;
     kajiya.run(move |ctx| game.frame(ctx))
