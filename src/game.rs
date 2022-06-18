@@ -39,7 +39,7 @@ impl Game {
         let track_mesh_asset = kajiya::mmap::mmapped_asset::<
             kajiya::asset::mesh::PackedTriMesh::Flat,
             _,
-        >("/baked/track.mesh")?;
+        >("/cache/track.mesh")?;
 
         let env_mesh_gfx = world_renderer.add_mesh(track_mesh_asset, AddMeshOptions::default());
         world_renderer.add_instance(
@@ -53,7 +53,7 @@ impl Game {
 
         // Create the dynamic occluder renderables (for party mode!)
         let occluder_mesh =
-            world_renderer.add_baked_mesh("/baked/occluder.mesh", AddMeshOptions::default())?;
+            world_renderer.add_baked_mesh("/cache/occluder.mesh", AddMeshOptions::default())?;
         let occluder_inst = world_renderer.add_instance(
             occluder_mesh,
             Affine3A::from_rotation_translation(Quat::IDENTITY, Vec3::ZERO),
@@ -61,7 +61,7 @@ impl Game {
 
         // Create the spinning cube light renderables
         let lights_mesh =
-            world_renderer.add_baked_mesh("/baked/lights.mesh", AddMeshOptions::default())?;
+            world_renderer.add_baked_mesh("/cache/lights.mesh", AddMeshOptions::default())?;
         let lights_inst = world_renderer.add_instance(
             lights_mesh,
             Affine3A::from_rotation_translation(Quat::IDENTITY, Vec3::ZERO),
@@ -108,7 +108,7 @@ impl Game {
             .build();
 
         let cube_mesh =
-            world_renderer.add_baked_mesh("/baked/cube.mesh", AddMeshOptions::default())?;
+            world_renderer.add_baked_mesh("/cache/cube.mesh", AddMeshOptions::default())?;
 
         Ok(Self {
             physics,

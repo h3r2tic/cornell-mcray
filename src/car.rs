@@ -13,11 +13,11 @@ pub struct CarMeshes {
 
 impl CarMeshes {
     pub fn load(world_renderer: &mut WorldRenderer) -> anyhow::Result<Self> {
-        let body = world_renderer.add_baked_mesh("/baked/car.mesh", AddMeshOptions::default())?;
+        let body = world_renderer.add_baked_mesh("/cache/car.mesh", AddMeshOptions::default())?;
         let left_wheel =
-            world_renderer.add_baked_mesh("/baked/wheel_left.mesh", AddMeshOptions::default())?;
+            world_renderer.add_baked_mesh("/cache/wheel_left.mesh", AddMeshOptions::default())?;
         let right_wheel =
-            world_renderer.add_baked_mesh("/baked/wheel_right.mesh", AddMeshOptions::default())?;
+            world_renderer.add_baked_mesh("/cache/wheel_right.mesh", AddMeshOptions::default())?;
 
         Ok(Self {
             body,
