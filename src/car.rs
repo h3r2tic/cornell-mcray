@@ -5,6 +5,22 @@ use kajiya::world_renderer::{AddMeshOptions, InstanceHandle, WorldRenderer};
 use kajiya_simple::*;
 use physx::{prelude::*, traits::Class};
 
+fn kajiya_2_macaw_vec3(a: kajiya_simple::Vec3) -> macaw::Vec3 {
+	return macaw::Vec3::new(a.x, a.y, a.z);
+}
+
+fn macaw_2_kajiya_vec3(a: macaw::Vec3) -> kajiya_simple::Vec3 {
+	return kajiya_simple::Vec3::new(a.x, a.y, a.z);
+}
+
+fn kajiya_2_macaw_quat(a: kajiya_simple::Quat) -> macaw::Quat {
+	return macaw::Quat::from_xyzw(a.x, a.y, a.z, a.w);
+}
+
+fn macaw_2_kajiya_quat(a: macaw::Quat) -> kajiya_simple::Quat {
+	return kajiya_simple::Quat::from_xyzw(a.x, a.y, a.z, a.w);
+}
+
 pub struct CarMeshes {
     body: kajiya::world_renderer::MeshHandle,
     left_wheel: kajiya::world_renderer::MeshHandle,
@@ -98,12 +114,12 @@ impl Car {
 
             world_renderer.set_instance_transform(
                 *inst,
-                Affine3A::from_rotation_translation(xform.rotation(), xform.translation()),
+                Affine3A::from_rotation_translation(macaw_2_kajiya_quat(xform.rotation()), macaw_2_kajiya_vec3(xform.translation())),
             );
 
             if self.main_rb == *rb_handle {
-                self.position = xform.translation();
-                self.rotation = xform.rotation();
+                self.position = macaw_2_kajiya_vec3(xform.translation());
+                self.rotation = macaw_2_kajiya_quat(xform.rotation());
             }
         }
     }

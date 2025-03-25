@@ -13,6 +13,22 @@ use physx_sys::{
 };
 use slotmap::{new_key_type, SlotMap};
 
+fn kajiya_2_macaw_vec3(a: kajiya_simple::Vec3) -> macaw::Vec3 {
+	return macaw::Vec3::new(a.x, a.y, a.z);
+}
+
+fn macaw_2_kajiya_vec3(a: macaw::Vec3) -> kajiya_simple::Vec3 {
+	return kajiya_simple::Vec3::new(a.x, a.y, a.z);
+}
+
+fn kajiya_2_macaw_quat(a: kajiya_simple::Quat) -> macaw::Quat {
+	return macaw::Quat::from_xyzw(a.x, a.y, a.z, a.w);
+}
+
+fn macaw_2_kajiya_quat(a: macaw::Quat) -> kajiya_simple::Quat {
+	return kajiya_simple::Quat::from_xyzw(a.x, a.y, a.z, a.w);
+}
+
 /// Many of the main types in PhysX have a userData *mut c_void field.
 /// Representing this safely in Rust requires generics everywhere,
 /// and pre-defining all the generic parameters makes things more usable.
@@ -191,10 +207,10 @@ impl PhysicsState {
 
                 (linear_velocity * t, delta_rotation)
             };
-
+			
             IsoTransform::from_rotation_translation(
-                delta_rotation * rotation,
-                position + delta_translation,
+                kajiya_2_macaw_quat(delta_rotation * rotation),
+                kajiya_2_macaw_vec3(position + delta_translation),
             )
         })
     }

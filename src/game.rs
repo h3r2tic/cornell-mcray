@@ -24,6 +24,22 @@ pub struct Game {
     occluder_t: f32,
 }
 
+fn kajiya_2_macaw_vec3(a: kajiya_simple::Vec3) -> macaw::Vec3 {
+	return macaw::Vec3::new(a.x, a.y, a.z);
+}
+
+fn macaw_2_kajiya_vec3(a: macaw::Vec3) -> kajiya_simple::Vec3 {
+	return kajiya_simple::Vec3::new(a.x, a.y, a.z);
+}
+
+fn kajiya_2_macaw_quat(a: kajiya_simple::Quat) -> macaw::Quat {
+	return macaw::Quat::from_xyzw(a.x, a.y, a.z, a.w);
+}
+
+fn macaw_2_kajiya_quat(a: macaw::Quat) -> kajiya_simple::Quat {
+	return kajiya_simple::Quat::from_xyzw(a.x, a.y, a.z, a.w);
+}
+
 impl Game {
     pub fn new(world_renderer: &mut WorldRenderer) -> anyhow::Result<Self> {
         // Can't be bothered to properly shut it down, and it crashes otherwise ¯\_(ツ)_/¯
@@ -95,13 +111,13 @@ impl Game {
             );
 
         let camera = CameraRig::builder()
-            .with(Position::new(car.position))
-            .with(Rotation::new(car.rotation))
+            .with(Position::new(kajiya_2_macaw_vec3(car.position)))
+            .with(Rotation::new(kajiya_2_macaw_quat(car.rotation)))
             .with(Smooth::new_position(1.25).predictive(true))
-            .with(Arm::new(Vec3::new(0.0, 1.5, -3.5)))
+            .with(Arm::new(macaw::Vec3::new(0.0, 1.5, -3.5)))
             .with(Smooth::new_position(2.5))
             .with(
-                LookAt::new(car.position + Vec3::Y)
+                LookAt::new(kajiya_2_macaw_vec3(car.position + Vec3::Y))
                     .tracking_smoothness(1.25)
                     .tracking_predictive(true),
             )
@@ -240,7 +256,7 @@ impl Game {
                 .unwrap();
             ctx.world_renderer.set_instance_transform(
                 *inst,
-                Affine3A::from_rotation_translation(xform.rotation(), xform.translation()),
+                Affine3A::from_rotation_translation(macaw_2_kajiya_quat(xform.rotation()), macaw_2_kajiya_vec3(xform.translation())),
             );
         }
     }
@@ -258,20 +274,21 @@ impl Game {
         self.update_physics(dt);
         self.update_game_objects(dt, &mut ctx);
 
-        self.camera.driver_mut::<Position>().position = self.car.position;
-        self.camera.driver_mut::<Rotation>().rotation = self.car.rotation;
-        self.camera.driver_mut::<LookAt>().target = self.car.position + Vec3::Y;
+        self.camera.driver_mut::<Position>().position = kajiya_2_macaw_vec3(self.car.position);
+        self.camera.driver_mut::<Rotation>().rotation = kajiya_2_macaw_quat(self.car.rotation);
+        self.camera.driver_mut::<LookAt>().target = kajiya_2_macaw_vec3(self.car.position + Vec3::Y);
 
         let lens = CameraLens {
             aspect_ratio: ctx.aspect_ratio(),
             ..Default::default()
         };
 
-        let camera_matrices = self
+        let _camera_matrices = self
             .camera
             .update(dt)
-            .into_position_rotation()
-            .through(&lens);
+            .into_position_rotation();
+
+        let camera_matrices = (macaw_2_kajiya_vec3(_camera_matrices.0), macaw_2_kajiya_quat(_camera_matrices.1)).through(&lens);
 
         WorldFrameDesc {
             camera_matrices,
